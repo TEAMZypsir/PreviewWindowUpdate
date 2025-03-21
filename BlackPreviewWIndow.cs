@@ -5,9 +5,10 @@ using System.IO;
 using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq; // ✅ Added to support file filtering
 
-[BepInPlugin("com.pulledp0rk.blackpreviewwindow", "BlackPreviewWindow", "1.0.0")]
-public class BlackPreviewWindow : BaseUnityPlugin
+[BepInPlugin("com.pulledp0rk.pp-previewwindow", "Pp-PreviewWindow", "1.0.0")]
+public class PpPreviewWindow : BaseUnityPlugin
 {
     private Texture2D customBackground;
     private string imagePath;
@@ -18,13 +19,13 @@ public class BlackPreviewWindow : BaseUnityPlugin
 
     private void Start()
     {
-        Logger.LogInfo("[BlackPreviewWindow] Mod Loaded!");
+        Logger.LogInfo("[Pp-PreviewWindow] Mod Loaded!");
 
-        imagePath = Path.Combine(Paths.PluginPath, "BlackPreviewWindow", "background.png");
+        imagePath = FindBackgroundImage(); // ✅ Locate a valid image file dynamically
 
-        if (!File.Exists(imagePath))
+        if (imagePath == null)
         {
-            Logger.LogError("[BlackPreviewWindow] Background image not found: " + imagePath);
+            Logger.LogError("[Pp-PreviewWindow] No valid background image found.");
             return;
         }
 
@@ -32,32 +33,45 @@ public class BlackPreviewWindow : BaseUnityPlugin
 
         if (customBackground == null)
         {
-            Logger.LogError("[BlackPreviewWindow] Failed to load texture.");
+            Logger.LogError("[Pp-PreviewWindow] Failed to load texture.");
             return;
         }
 
         // ✅ Ensure Unity properly tracks the texture and sprite
-        customBackground.name = "background.png"; 
+        customBackground.name = "background"; // ✅ Always name the texture "background"
         cachedSprite = TextureToSprite(customBackground);
         if (cachedSprite != null)
         {
-            cachedSprite.name = "background.png"; 
+            cachedSprite.name = "background"; // ✅ Always name the sprite "background"
         }
 
         StartCoroutine(PreloadPreviewPanels()); // ✅ Preload all preview panels at game start
     }
 
+    // ✅ Finds a valid image file in the background folder
+    private string FindBackgroundImage()
+    {
+        string pluginDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "background");
+        if (!Directory.Exists(pluginDir)) return null;
+
+        string[] validExtensions = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tga", "*.gif" };
+        string[] files = validExtensions
+            .SelectMany(ext => Directory.GetFiles(pluginDir, ext))
+            .ToArray();
+
+        return files.Length > 0 ? files[0] : null; // ✅ Return the first valid image found
+    }
+
     private IEnumerator PreloadPreviewPanels()
     {
-        // ✅ Wait for UI to fully load
         while (GameObject.Find("Preloader UI") == null || 
                GameObject.Find("ItemInfoWindowTemplate(Clone)/Inner/Contents/Preview Panel") == null)
         {
-            Logger.LogWarning("[BlackPreviewWindow] Waiting for UI elements to load...");
+            Logger.LogWarning("[Pp-PreviewWindow] Waiting for UI elements to load...");
             yield return new WaitForSeconds(1f);
         }
 
-        Logger.LogInfo("[BlackPreviewWindow] UI elements loaded. Preloading all preview panels...");
+        Logger.LogInfo("[Pp-PreviewWindow] UI elements loaded. Preloading all preview panels...");
 
         Image[] images = GameObject.FindObjectsOfType<Image>();
         foreach (var img in images)
@@ -66,7 +80,6 @@ public class BlackPreviewWindow : BaseUnityPlugin
             {
                 GameObject panel = img.gameObject;
 
-                // Store original background
                 if (!panelOriginalSprites.ContainsKey(panel) && img.sprite != null)
                 {
                     panelOriginalSprites[panel] = img.sprite;
@@ -80,13 +93,13 @@ public class BlackPreviewWindow : BaseUnityPlugin
                 if (cachedSprite != null)
                 {
                     UIHelper.UpdatePreviewWindow(img, cachedSprite);
-                    Logger.LogInfo($"[BlackPreviewWindow] Preloaded background for panel: {panel.name}");
+                    Logger.LogInfo($"[Pp-PreviewWindow] Preloaded background for panel: {panel.name}");
                 }
             }
         }
 
-        Logger.LogInfo("[BlackPreviewWindow] Preloading complete.");
-        StartCoroutine(MonitorPreviewPanel()); // ✅ Continue monitoring for new panels
+        Logger.LogInfo("[Pp-PreviewWindow] Preloading complete.");
+        StartCoroutine(MonitorPreviewPanel()); 
     }
 
     private IEnumerator MonitorPreviewPanel()
@@ -117,7 +130,7 @@ public class BlackPreviewWindow : BaseUnityPlugin
                         if (cachedSprite != null)
                         {
                             UIHelper.UpdatePreviewWindow(img, cachedSprite);
-                            Logger.LogInfo($"[BlackPreviewWindow] Applied background to new preview panel: {panel.name}");
+                            Logger.LogInfo($"[Pp-PreviewWindow] Applied background to new preview panel: {panel.name}");
                         }
                     }
                 }
@@ -137,7 +150,7 @@ public class BlackPreviewWindow : BaseUnityPlugin
                             if (originalMainTextures.ContainsKey(panel))
                             {
                                 img.material.mainTexture = originalMainTextures[panel];
-                                Logger.LogInfo($"[BlackPreviewWindow] Restored original mainTexture for closed panel: {panel.name}");
+                                Logger.LogInfo($"[Pp-PreviewWindow] Restored original mainTexture for closed panel: {panel.name}");
                             }
                         }
                     }
@@ -158,7 +171,7 @@ public class BlackPreviewWindow : BaseUnityPlugin
         {
             if (backgroundImage == null || newSprite == null)
             {
-                Debug.LogError("[BlackPreviewWindow] Error: Null reference in UpdatePreviewWindow.");
+                Debug.LogError("[Pp-PreviewWindow] Error: Null reference in UpdatePreviewWindow.");
                 return;
             }
 
@@ -173,7 +186,7 @@ public class BlackPreviewWindow : BaseUnityPlugin
             backgroundImage.canvasRenderer.SetTexture(newSprite.texture);
             backgroundImage.SetAllDirty();
 
-            Debug.Log($"[BlackPreviewWindow] Successfully updated preview window background to {newSprite.name}");
+            Debug.Log($"[Pp-PreviewWindow] Successfully updated preview window background to {newSprite.name}");
         }
     }
 
@@ -185,7 +198,7 @@ public class BlackPreviewWindow : BaseUnityPlugin
 
         if (!isLoaded)
         {
-            Logger.LogError("[BlackPreviewWindow] Failed to load texture from file: " + filePath);
+            Logger.LogError("[Pp-PreviewWindow] Failed to load texture from file: " + filePath);
             return null;
         }
 
@@ -196,7 +209,7 @@ public class BlackPreviewWindow : BaseUnityPlugin
     {
         if (texture == null)
         {
-            Logger.LogError("[BlackPreviewWindow] Texture is null, cannot convert to sprite.");
+            Logger.LogError("[Pp-PreviewWindow] Texture is null, cannot convert to sprite.");
             return null;
         }
 

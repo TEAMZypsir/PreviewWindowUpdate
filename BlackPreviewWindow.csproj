@@ -2,8 +2,8 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <OutputPath>..\</OutputPath>
-    <AssemblyName>BlackPreviewWindow</AssemblyName>
-    <RootNamespace>BlackPreviewWindow</RootNamespace>
+    <AssemblyName>Pp-PreviewWindow</AssemblyName>
+    <RootNamespace>Pp-PreviewWindow</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
